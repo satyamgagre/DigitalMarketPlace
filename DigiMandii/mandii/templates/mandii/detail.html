@@ -1,0 +1,19 @@
+{% extends 'mandii/base.html' %}
+{% block body %}
+This is a detail view
+
+<div class="flex p-10">
+    <div class="">
+        <img src="https://manalco.com/wp-content/uploads/2023/04/no-image.jpg" alt="">
+    </div>
+    <div class="pl-10">
+        <div class="text-4xl mb-4">{{ product.name }}</div>
+        <div class="mb-4">{{ product.description }}</div>
+        <div class="mb-4 text-green-700 font-bold ">₹{{ product.price }}</div>
+        <div class="">
+            <button id="checkout-button" class="bg-green-500 text-white px-4 py-2 rounded-sm">Buy</button>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
