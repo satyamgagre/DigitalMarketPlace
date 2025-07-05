@@ -15,9 +15,9 @@
             <div class="product bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden">
                 <!-- Product Image -->
                 <div class="product-image relative overflow-hidden">
-                    <img src="https://manalco.com/wp-content/uploads/2023/04/no-image.jpg" 
-                         alt="{{ product.name }}" 
-                         class="w-full h-48 object-cover transition-transform duration-300 hover:scale-105">
+                    <img src="{{ product.file.url }}" 
+                        alt="{{ product.name }}" 
+                        class="w-full h-48 object-cover transition-transform duration-300 hover:scale-105">
                     <!-- Optional: Add a badge for featured products -->
                     {% if product.is_featured %}
                     <div class="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
@@ -51,12 +51,12 @@
                     <!-- Action Button -->
                     <div class="mt-6">
                         <a href="{% url 'detail' product.id %}" 
-                           class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2 group">
+                            class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-4 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2 group">
                             <span>View Details</span>
                             <svg class="w-4 h-4 transform group-hover:translate-x-1 transition-transform" 
-                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                                      d="M9 5l7 7-7 7"></path>
+                                    d="M9 5l7 7-7 7"></path>
                             </svg>
                         </a>
                     </div>
@@ -81,7 +81,7 @@
             <nav class="flex space-x-2">
                 {% if products.has_previous %}
                 <a href="?page={{ products.previous_page_number }}" 
-                   class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
+                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
                     Previous
                 </a>
                 {% endif %}
@@ -92,7 +92,7 @@
                 
                 {% if products.has_next %}
                 <a href="?page={{ products.next_page_number }}" 
-                   class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
+                    class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
                     Next
                 </a>
                 {% endif %}
@@ -107,7 +107,7 @@
             <div class="mb-8">
                 <svg class="w-24 h-24 text-gray-300 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" 
-                          d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
+                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
                 </svg>
             </div>
             <h2 class="text-3xl font-bold text-gray-400 mb-4">No Products Available</h2>
@@ -115,7 +115,7 @@
                 We're currently updating our inventory. Please check back later for exciting new products!
             </p>
             <a href="{% url 'home' %}" 
-               class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200">
+                class="bg-green-500 hover:bg-green-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200">
                 Go Home
             </a>
         </div>

@@ -12,3 +12,7 @@ Order created: 5 for satyamgagre4@gmail.com
 Payment verified successfully for order 5
 Order created: 6 for satyamgagre4@gmail.com
 Payment verified successfully for order 6
+Order created: 7 for satyamgagre4@gmail.com
+Database save failed: OrderDetail() got unexpected keyword arguments: 'quantity', 'shipping_cost', 'total_amount'
+Database save failed: OrderDetail() got unexpected keyword arguments: 'quantity', 'shipping_cost', 'total_amount'
+Order created: 8 for satyamgagre4@gmail.com

@@ -4,10 +4,12 @@ from .models import Product, OrderDetail
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
+from django.contrib.admin.views.decorators import staff_member_required
 import razorpay
 from django.http import JsonResponse
 import json
 import logging
+from .forms import ProductForm
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -24,35 +26,76 @@ def detail(request, id):
         'razorpay_key_id': razorpay_key_id
     })
 
+
+@staff_member_required
+def create_product(request):
+    """Admin: Create a new product"""
+    if request.method == 'POST':
+        form = ProductForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Product created successfully.')
+            return redirect('product_list')
+    else:
+        form = ProductForm()
+    return render(request, 'mandii/product_form.html', {'form': form})
+
+
+@staff_member_required
+def update_product(request, id):
+    """Admin: Update an existing product"""
+    product = get_object_or_404(Product, id=id)
+    if request.method == 'POST':
+        form = ProductForm(request.POST, request.FILES, instance=product)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Product updated successfully.')
+            return redirect('product_detail', id=product.id)
+    else:
+        form = ProductForm(instance=product)
+    return render(request, 'mandii/product_form.html', {'form': form})
+
+
+@staff_member_required
+def delete_product(request, id):
+    """Admin: Delete a product"""
+    product = get_object_or_404(Product, id=id)
+    if request.method == 'POST':
+        product.delete()
+        messages.success(request, 'Product deleted.')
+        return redirect('product_list')
+    return render(request, 'mandii/product_confirm_delete.html', {'product': product})
+
+
 @csrf_exempt
 @require_POST
 def create_checkout_session(request, id):
     try:
         product = get_object_or_404(Product, id=id, is_active=True)
-        
-        # Read customer email from frontend JSON body
+
+        # Read customer email, quantity, and totals from frontend JSON body
         try:
             data = json.loads(request.body)
             customer_email = data.get("email")
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON data'}, status=400)
-        
-        if not customer_email:
-            return JsonResponse({'error': 'Email is required'}, status=400)
-        
-        # Validate email format (basic check)
-        if '@' not in customer_email:
-            return JsonResponse({'error': 'Invalid email format'}, status=400)
+            quantity = int(data.get("quantity", 1))
+            items_total = float(data.get("items_total", product.price))
+            shipping_cost = float(data.get("shipping_cost", 0))
+            total_amount = float(data.get("total_amount", product.price))
+        except (json.JSONDecodeError, ValueError):
+            return JsonResponse({'error': 'Invalid request data'}, status=400)
 
-        # Razorpay client initialization
+        if not customer_email or '@' not in customer_email:
+            return JsonResponse({'error': 'Valid email is required'}, status=400)
+
+        # Initialize Razorpay client
         try:
             client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
         except Exception as e:
             logger.error(f"Razorpay client initialization failed: {str(e)}")
             return JsonResponse({'error': 'Payment service unavailable'}, status=500)
 
-        # Order data
-        amount = int(product.price * 100)  # Convert to paise
+        # Prepare order data
+        amount = int(total_amount * 100)  # Convert rupees to paise
         order_data = {
             "amount": amount,
             "currency": "INR",
@@ -66,12 +109,15 @@ def create_checkout_session(request, id):
             logger.error(f"Razorpay order creation failed: {str(e)}")
             return JsonResponse({'error': 'Failed to create payment order'}, status=500)
 
-        # Save in DB
+        # Save order in DB
         try:
             order_detail = OrderDetail.objects.create(
                 customer_email=customer_email,
                 product=product,
+                quantity=quantity,
                 amount=amount,
+                shipping_cost=shipping_cost,
+                total_amount=total_amount,
                 razorpay_order_id=order['id'],
                 payment_status='pending'
             )
@@ -86,12 +132,14 @@ def create_checkout_session(request, id):
             "amount": amount,
             "currency": "INR",
             "product_name": product.name,
-            "customer_email": customer_email
+            "customer_email": customer_email,
+            "order_id_db": order_detail.id  # return DB order ID for redirect
         })
 
     except Exception as e:
         logger.error(f"Unexpected error in create_checkout_session: {str(e)}")
         return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
 
 @csrf_exempt
 @require_POST

@@ -17,6 +17,7 @@ class Product(models.Model):
     class Meta:
         ordering = ['-created_on']
 
+
 class OrderDetail(models.Model):
     PAYMENT_STATUS_CHOICES = [
         ('pending', 'Pending'),
@@ -24,16 +25,22 @@ class OrderDetail(models.Model):
         ('failed', 'Failed'),
         ('refunded', 'Refunded'),
     ]
-    
+
     customer_email = models.EmailField()
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    amount = models.IntegerField(help_text="Amount in paise")  # in paise
+    quantity = models.PositiveIntegerField(default=1)
+    shipping_cost = models.FloatField(default=0.0, help_text="Shipping cost in rupees")
+    total_amount = models.FloatField(default=0.0, help_text="Total amount in rupees (product x quantity + shipping)")
+    amount = models.IntegerField(help_text="Amount in paise")  # Razorpay requires paise
+
     razorpay_order_id = models.CharField(max_length=200, unique=True, blank=True, null=True)
     razorpay_payment_id = models.CharField(max_length=200, blank=True, null=True)
     razorpay_signature = models.CharField(max_length=500, blank=True, null=True)
+
     has_paid = models.BooleanField(default=False)
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
     failure_reason = models.CharField(max_length=500, blank=True, null=True)
+
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(auto_now=True)
 
@@ -42,7 +49,7 @@ class OrderDetail(models.Model):
 
     class Meta:
         ordering = ['-created_on']
-        
+
     @property
     def amount_in_rupees(self):
         """Convert paise to rupees for display"""
