@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Product Checkout</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .product-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .product-info {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .product-image {
+            width: 200px;
+            height: 200px;
+            background-color: #e0e0e0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+        }
+        .product-details h2 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .product-price {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+            margin: 10px 0;
+        }
+        .checkout-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+        input[type="email"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .error {
+            color: #dc3545;
+            background-color: #f8d7da;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #f5c6cb;
+        }
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #c3e6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="product-card">
+        <div class="product-info">
+            <div class="product-image">
+                Product Image
+            </div>
+            <div class="product-details">
+                <h2 id="product-name">Sample Digital Product</h2>
+                <p id="product-description">This is a sample digital product description. It includes all the features you need.</p>
+                <div class="product-price">₹<span id="product-price">999</span></div>
+            </div>
+        </div>
+
+        <div class="checkout-form">
+            <h3>Checkout</h3>
+            <form id="checkout-form">
+                <div class="form-group">
+                    <label for="email">Email Address:</label>
+                    <input type="email" id="email" name="email" required placeholder="Enter your email">
+                </div>
+                <button type="submit" class="btn" id="checkout-btn">
+                    Pay ₹<span id="btn-price">999</span>
+                </button>
+            </form>
+            
+            <div id="loading" class="loading">
+                <p>Processing your payment...</p>
+            </div>
+            
+            <div id="error-message" class="error" style="display: none;"></div>
+            <div id="success-message" class="success" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- Razorpay Script -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    
+    <script>
+        // Configuration - Replace with your actual values
+        const CONFIG = {
+            productId: 1, // Replace with actual product ID
+            apiUrl: '/create-checkout-session/', // Your Django endpoint
+            verifyUrl: '/payment-verification/', // Your verification endpoint
+            successUrl: '/payment-success/', // Success page URL
+            failureUrl: '/payment-failed/' // Failure page URL
+        };
+
+        // DOM elements
+        const checkoutForm = document.getElementById('checkout-form');
+        const checkoutBtn = document.getElementById('checkout-btn');
+        const loadingDiv = document.getElementById('loading');
+        const errorDiv = document.getElementById('error-message');
+        const successDiv = document.getElementById('success-message');
+
+        // Show/hide elements
+        function showLoading() {
+            loadingDiv.style.display = 'block';
+            checkoutBtn.disabled = true;
+            errorDiv.style.display = 'none';
+            successDiv.style.display = 'none';
+        }
+
+        function hideLoading() {
+            loadingDiv.style.display = 'none';
+            checkoutBtn.disabled = false;
+        }
+
+        function showError(message) {
+            errorDiv.innerHTML = message;
+            errorDiv.style.display = 'block';
+            successDiv.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            successDiv.innerHTML = message;
+            successDiv.style.display = 'block';
+            errorDiv.style.display = 'none';
+        }
+
+        // Step 1: Create checkout session
+        async function createCheckoutSession(email) {
+            try {
+                const response = await fetch(`${CONFIG.apiUrl}${CONFIG.productId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create checkout session');
+                }
+
+                return data;
+            } catch (error) {
+                console.error('Error creating checkout session:', error);
+                throw error;
+            }
+        }
+
+        // Step 2: Open Razorpay checkout
+        function openRazorpayCheckout(orderData, customerEmail) {
+            const options = {
+                key: orderData.razorpay_key_id,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: 'Your Store Name',
+                description: 'Purchase Description',
+                order_id: orderData.order_id,
+                handler: function(response) {
+                    // Payment successful - verify payment
+                    verifyPayment(response);
+                },
+                prefill: {
+                    email: customerEmail
+                },
+                theme: {
+                    color: '#007bff'
+                },
+                modal: {
+                    ondismiss: function() {
+                        // Payment cancelled
+                        hideLoading();
+                        showError('Payment was cancelled. Please try again.');
+                    }
+                }
+            };
+
+            const razorpay = new Razorpay(options);
+            razorpay.open();
+        }
+
+        // Step 3: Verify payment
+        async function verifyPayment(paymentData) {
+            try {
+                const response = await fetch(CONFIG.verifyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        razorpay_order_id: paymentData.razorpay_order_id,
+                        razorpay_payment_id: paymentData.razorpay_payment_id,
+                        razorpay_signature: paymentData.razorpay_signature
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.status === 'success') {
+                    // Payment verified successfully
+                    showSuccess('Payment successful! Redirecting...');
+                    
+                    // Redirect to success page
+                    setTimeout(() => {
+                        window.location.href = `${CONFIG.successUrl}${data.order_id}/`;
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Payment verification failed');
+                }
+            } catch (error) {
+                console.error('Error verifying payment:', error);
+                hideLoading();
+                showError(`Payment verification failed: ${error.message}`);
+            }
+        }
+
+        // Handle form submission
+        checkoutForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            
+            // Basic email validation
+            if (!email || !email.includes('@')) {
+                showError('Please enter a valid email address');
+                return;
+            }
+
+            showLoading();
+
+            try {
+                // Step 1: Create checkout session
+                const orderData = await createCheckoutSession(email);
+                
+                // Step 2: Open Razorpay checkout
+                openRazorpayCheckout(orderData, email);
+                
+            } catch (error) {
+                hideLoading();
+                showError(`Error: ${error.message}`);
+            }
+        });
+
+        // Handle payment failures
+        window.addEventListener('message', function(event) {
+            if (event.data && event.data.type === 'payment_failed') {
+                hideLoading();
+                const errorParams = new URLSearchParams({
+                    order_id: event.data.order_id,
+                    error_code: event.data.error_code,
+                    error_description: event.data.error_description
+                });
+                window.location.href = `${CONFIG.failureUrl}?${errorParams.toString()}`;
+            }
+        });
+    </script>
+</body>
+</html>

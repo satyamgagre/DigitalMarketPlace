@@ -1,0 +1,14 @@
+Order created: 1 for satyamgagre4@gmail.com
+Payment verified successfully for order 1
+Order created: 2 for satyamgagre4@gmail.com
+Payment verified successfully for order 2
+Unexpected error in create_checkout_session: module 'razorpay.errors' has no attribute 'RazorpayError'
+Unexpected error in create_checkout_session: module 'razorpay.errors' has no attribute 'RazorpayError'
+Order created: 3 for satyamgagre4@gmail.com
+Payment verified successfully for order 3
+Order created: 4 for satyamgagre4@gmail.com
+Payment verified successfully for order 4
+Order created: 5 for satyamgagre4@gmail.com
+Payment verified successfully for order 5
+Order created: 6 for satyamgagre4@gmail.com
+Payment verified successfully for order 6

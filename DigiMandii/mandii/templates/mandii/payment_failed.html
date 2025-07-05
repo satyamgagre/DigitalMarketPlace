@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Failed</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .error-icon {
+            font-size: 64px;
+            color: #dc3545;
+            margin-bottom: 20px;
+        }
+        .error-title {
+            color: #dc3545;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+        .error-details {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .detail-label {
+            font-weight: bold;
+            color: #495057;
+        }
+        .detail-value {
+            color: #6c757d;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 24px;
+            margin: 10px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background-color: #545b62;
+        }
+        .error-message {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            border: 1px solid #f5c6cb;
+        }
+        .help-text {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="error-icon">✗</div>
+        <h1 class="error-title">Payment Failed</h1>
+        <p>We're sorry, but your payment could not be processed at this time.</p>
+        
+        {% if error_description %}
+        <div class="error-message">
+            <strong>Error:</strong> {{ error_description }}
+        </div>
+        {% endif %}
+        
+        {% if order %}
+        <div class="error-details">
+            <h3>Order Details</h3>
+            <div class="detail-row">
+                <span class="detail-label">Order ID:</span>
+                <span class="detail-value">#{{ order.id }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Product:</span>
+                <span class="detail-value">{{ order.product.name }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Amount:</span>
+                <span class="detail-value">₹{{ order.amount_in_rupees }}</span>
+            </div>
+            <div class="detail-row">
+                <span class="detail-label">Customer Email:</span>
+                <span class="detail-value">{{ order.customer_email }}</span>
+            </div>
+            {% if razorpay_order_id %}
+            <div class="detail-row">
+                <span class="detail-label">Razorpay Order ID:</span>
+                <span class="detail-value">{{ razorpay_order_id }}</span>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+        
+        <div class="help-text">
+            <p><strong>What you can do:</strong></p>
+            <ul style="text-align: left; display: inline-block;">
+                <li>Check your payment details and try again</li>
+                <li>Try using a different payment method</li>
+                <li>Contact your bank if the issue persists</li>
+                <li>Contact our support team for assistance</li>
+            </ul>
+        </div>
+        
+        <div>
+            {% if order %}
+                <a href="{% url 'detail' order.product.id %}" class="btn btn-danger">Try Again</a>
+            {% endif %}
+            <a href="{% url 'index' %}" class="btn btn-secondary">Back to Products</a>
+        </div>
+        
+        <div class="help-text">
+            <p>If you continue to experience issues, please contact our support team with the order details above.</p>
+        </div>
+    </div>
+</body>
+</html>

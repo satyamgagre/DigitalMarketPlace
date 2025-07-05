@@ -121,3 +121,33 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# settings.py
+
+# RAZORPAY_KEY_ID = 'your_test_key_id'
+# RAZORPAY_KEY_SECRET = 'your_test_key_secret'
+
+
+RAZORPAY_KEY_ID = 'rzp_test_PgknWNznZw6TAN'
+RAZORPAY_KEY_SECRET = 'kYicIIbTHjpIIo24T1EufiKU'
+
+# Logging configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': 'payment.log',
+        },
+    },
+    'loggers': {
+        'mandii.views': {  # Replace 'mandii' with your app name
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
+}

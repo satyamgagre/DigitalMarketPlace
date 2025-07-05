@@ -1,204 +1,872 @@
-{% extends 'mandii/base.html' %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ product.name }} - Checkout</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
 
-{% block body %}
-<div class="container mx-auto px-4 py-8">
-    <!-- Breadcrumb Navigation -->
-    <nav class="mb-8">
-        <ol class="flex items-center space-x-2 text-sm text-gray-600">
-            <li>
-                <a href="/" class="hover:text-green-600 transition-colors">Home</a>
-            </li>
-            <li>
-                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                </svg>
-            </li>
-            <li>
-                <a href="{% url 'index' %}" class="hover:text-green-600 transition-colors">Products</a>
-            </li>
-            <li>
-                <svg class="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd"></path>
-                </svg>
-            </li>
-            <li class="text-gray-900 font-medium">{{ product.name }}</li>
-        </ol>
-    </nav>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
 
-    <!-- Product Detail Section -->
-    <div class="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 p-6 lg:p-10">
-            <!-- Product Image Section -->
-            <div class="space-y-4">
-                <!-- Main Image -->
-                <div class="relative bg-gray-100 rounded-lg overflow-hidden">
-                    <img id="main-image" 
-                         src="https://manalco.com/wp-content/uploads/2023/04/no-image.jpg" 
-                         alt="{{ product.name }}" 
-                         class="w-full h-96 object-cover transition-transform duration-300 hover:scale-105">
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+
+        .btn-back {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 16px;
+            text-decoration: none;
+            border-radius: 20px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .btn-back:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .product-section {
+            padding: 30px;
+        }
+
+        .product-info {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .product-image {
+            width: 100%;
+            height: 300px;
+            background: linear-gradient(135deg, #e0e0e0 0%, #f0f0f0 100%);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            overflow: hidden;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .product-image:hover {
+            transform: scale(1.02);
+        }
+
+        .product-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .product-details h2 {
+            margin: 0 0 16px 0;
+            color: #333;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .product-description {
+            color: #666;
+            margin-bottom: 20px;
+            font-size: 16px;
+        }
+
+        .price-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .unit-price {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+        }
+
+        .total-price {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .quantity-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .quantity-label {
+            display: block;
+            margin-bottom: 12px;
+            font-weight: 600;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .quantity-btn {
+            width: 44px;
+            height: 44px;
+            border: 2px solid #007bff;
+            background: white;
+            color: #007bff;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            user-select: none;
+        }
+
+        .quantity-btn:hover:not(:disabled) {
+            background: #007bff;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .quantity-btn:disabled {
+            border-color: #ccc;
+            color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .quantity-input {
+            width: 80px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 18px;
+            text-align: center;
+            font-weight: 600;
+            transition: border-color 0.3s ease;
+        }
+
+        .quantity-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .quantity-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .checkout-form {
+            background: #f8f9fa;
+            padding: 30px;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+        }
+
+        .checkout-form h3 {
+            margin: 0 0 20px 0;
+            color: #333;
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+
+        .form-input.error {
+            border-color: #dc3545;
+            box-shadow: 0 0 0 3px rgba(220,53,69,0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+            color: white;
+            padding: 16px 32px;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .btn-primary:hover::before {
+            left: 100%;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,123,255,0.3);
+        }
+
+        .btn-primary:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .btn-primary:disabled::before {
+            display: none;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 16px;
+            border-radius: 8px;
+            margin: 16px 0;
+            font-weight: 500;
+            display: none;
+        }
+
+        .error {
+            color: #721c24;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+
+        .success {
+            color: #155724;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+
+        .order-summary {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .order-summary h4 {
+            margin: 0 0 16px 0;
+            color: #333;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f1f1f1;
+        }
+
+        .summary-row:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            font-weight: 600;
+            font-size: 18px;
+        }
+
+        .trust-badges {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .trust-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .security-icon {
+            width: 16px;
+            height: 16px;
+            background: #28a745;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 10px;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .product-info {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+
+            .product-image {
+                height: 250px;
+            }
+
+            .product-section {
+                padding: 20px;
+            }
+
+            .checkout-form {
+                padding: 20px;
+            }
+
+            .quantity-controls {
+                justify-content: center;
+            }
+
+            .trust-badges {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .product-details h2 {
+                font-size: 24px;
+            }
+
+            .total-price {
+                font-size: 28px;
+            }
+
+            .quantity-btn {
+                width: 40px;
+                height: 40px;
+            }
+
+            .quantity-input {
+                width: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="{% url 'index' %}" class="btn-back">← Back to Products</a>
+            <h1>Secure Checkout</h1>
+        </div>
+
+        <div class="product-section">
+            <div class="product-info">
+                <div class="product-image">
+                    {% if product.file %}
+                        <img src="{{ product.file.url }}" alt="{{ product.name }}" loading="lazy">
+                    {% else %}
+                        <div style="text-align: center; color: #999;">
+                            <div style="font-size: 48px; margin-bottom: 8px;">📦</div>
+                            <div>Product Image</div>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="product-details">
+                    <h2>{{ product.name }}</h2>
+                    <p class="product-description">{{ product.description }}</p>
                     
-                    <!-- Image Zoom Indicator -->
-                    <div class="absolute top-4 right-4 bg-black bg-opacity-50 text-white px-2 py-1 rounded-full text-xs opacity-0 hover:opacity-100 transition-opacity">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"></path>
-                        </svg>
+                    <div class="price-section">
+                        <div class="unit-price">Unit Price: ₹{{ product.price }}</div>
+                        <div class="total-price" id="total-price">₹{{ product.price }}</div>
+                    </div>
+
+                    <div class="quantity-section">
+                        <label class="quantity-label">Quantity</label>
+                        <div class="quantity-controls">
+                            <button type="button" class="quantity-btn" id="decrease-btn" aria-label="Decrease quantity">−</button>
+                            <input type="number" class="quantity-input" id="quantity" value="1" min="1" max="99" aria-label="Quantity">
+                            <button type="button" class="quantity-btn" id="increase-btn" aria-label="Increase quantity">+</button>
+                        </div>
+                        <div class="quantity-info">
+                            <span>Available: In Stock</span>
+                            <span id="quantity-total">Items: ₹{{ product.price }}</span>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Product Info Section -->
-            <div class="space-y-6">
-                <!-- Product Title -->
-                <div>
-                    <h1 class="text-3xl lg:text-4xl font-bold text-gray-900 mb-2">{{ product.name }}</h1>
-                </div>
-
-                <!-- Product Price -->
-                <div class="border-t border-b border-gray-200 py-4">
-                    <div class="flex items-center space-x-4">
-                        <span class="text-3xl font-bold text-green-600">₹{{ product.price }}</span>
-                        <span class="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm font-medium">
-                            Best Price
-                        </span>
+            <div class="checkout-form">
+                <h3>Complete Your Order</h3>
+                
+                <div class="order-summary">
+                    <h4>Order Summary</h4>
+                    <div class="summary-row">
+                        <span>Item(s) Total:</span>
+                        <span id="items-total">₹{{ product.price }}</span>
                     </div>
-                    <p class="text-sm text-gray-600 mt-2">
-                        <span class="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-                        In Stock
-                    </p>
-                </div>
-
-                <!-- Product Description -->
-                <div>
-                    <h3 class="text-lg font-semibold text-gray-900 mb-3">Description</h3>
-                    <div class="text-gray-700">
-                        {{ product.description|linebreaks }}
+                    <div class="summary-row">
+                        <span>Shipping (1.5%):</span>
+                        <span id="shipping-cost">₹{{ product.price|floatformat:2 }}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Total:</span>
+                        <span id="order-total">₹{{ product.price }}</span>
                     </div>
                 </div>
 
-                <!-- Quantity Selector -->
-                <div class="space-y-4">
-                    <div class="flex items-center space-x-4">
-                        <label class="text-sm font-medium text-gray-700">Quantity:</label>
-                        <div class="flex items-center border border-gray-300 rounded-lg">
-                            <button type="button" 
-                                    class="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
-                                    onclick="decreaseQuantity()">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path>
-                                </svg>
-                            </button>
-                            <input type="number" 
-                                   id="quantity" 
-                                   min="1" 
-                                   value="1" 
-                                   class="w-16 text-center border-0 focus:ring-0 focus:outline-none">
-                            <button type="button" 
-                                    class="px-3 py-2 text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition-colors"
-                                    onclick="increaseQuantity()">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
-                                </svg>
-                            </button>
-                        </div>
+                <form id="checkout-form" novalidate>
+                    <div class="form-group">
+                        <label for="email" class="form-label">Email Address *</label>
+                        <input type="email" 
+                               id="email" 
+                               name="email" 
+                               class="form-input" 
+                               required 
+                               autofocus 
+                               placeholder="Enter your email address"
+                               aria-describedby="email-error">
+                        <div id="email-error" class="error" style="display: none; margin-top: 8px; font-size: 14px;"></div>
                     </div>
 
-                    <!-- Action Buttons -->
-                    <div class="space-y-3">
-                        <button id="checkout-button" 
-                                class="w-full bg-green-500 hover:bg-green-600 text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5-6M20 13v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6"></path>
-                            </svg>
-                            <span>Buy Now</span>
-                        </button>
-                        
-                        <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold py-4 px-6 rounded-lg transition-colors duration-200 flex items-center justify-center space-x-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
-                            </svg>
-                            <span>Add to Wishlist</span>
-                        </button>
-                    </div>
+                    <button type="submit" class="btn-primary" id="checkout-btn">
+                        <span id="btn-text">Pay ₹{{ product.price }}</span>
+                        <span id="btn-loading" style="display: none;">Processing...</span>
+                    </button>
+                </form>
+
+                <div id="loading" class="loading">
+                    <div class="loading-spinner"></div>
+                    <p>Processing your payment...</p>
                 </div>
 
-                <!-- Additional Product Info -->
-                <div class="border-t border-gray-200 pt-6">
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div class="flex items-center space-x-2">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path>
-                            </svg>
-                            <span class="text-gray-600">Free Shipping</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <span class="text-gray-600">30-Day Returns</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path>
-                            </svg>
-                            <span class="text-gray-600">Secure Payment</span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
-                            <span class="text-gray-600">24/7 Support</span>
-                        </div>
+                <div id="error-message" class="message error"></div>
+                <div id="success-message" class="message success"></div>
+
+                <div class="trust-badges">
+                    <div class="trust-badge">
+                        <div class="security-icon">🔒</div>
+                        <span>Secure Payment</span>
+                    </div>
+                    <div class="trust-badge">
+                        <div class="security-icon">✓</div>
+                        <span>SSL Encrypted</span>
+                    </div>
+                    <div class="trust-badge">
+                        <div class="security-icon">🛡️</div>
+                        <span>100% Safe</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Back to Products Button -->
-    <div class="mt-8 text-center">
-        <a href="{% url 'index' %}" 
-           class="inline-flex items-center space-x-2 text-green-600 hover:text-green-700 transition-colors">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
-            </svg>
-            <span>Back to Products</span>
-        </a>
-    </div>
-</div>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+        const CONFIG = {
+            productId: {{ product.id }},
+            productName: "{{ product.name }}",
+            productPrice: {{ product.price }},
+            razorpayKeyId: "{{ razorpay_key_id }}",
+            apiUrl: "{% url 'create_checkout_session' product.id %}",
+            verifyUrl: "{% url 'payment_verification' %}",
+            successUrlBase: "/payment-success/"
+        };
 
-<!-- JavaScript for Interactive Features -->
-<script>
-    // Quantity Controls
-    function increaseQuantity() {
-        const quantityInput = document.getElementById('quantity');
-        const currentValue = parseInt(quantityInput.value);
-        quantityInput.value = currentValue + 1;
-    }
+        // DOM elements
+        const elements = {
+            checkoutForm: document.getElementById('checkout-form'),
+            checkoutBtn: document.getElementById('checkout-btn'),
+            btnText: document.getElementById('btn-text'),
+            btnLoading: document.getElementById('btn-loading'),
+            loadingDiv: document.getElementById('loading'),
+            errorDiv: document.getElementById('error-message'),
+            successDiv: document.getElementById('success-message'),
+            emailInput: document.getElementById('email'),
+            emailError: document.getElementById('email-error'),
+            quantityInput: document.getElementById('quantity'),
+            decreaseBtn: document.getElementById('decrease-btn'),
+            increaseBtn: document.getElementById('increase-btn'),
+            totalPrice: document.getElementById('total-price'),
+            quantityTotal: document.getElementById('quantity-total'),
+            itemsTotal: document.getElementById('items-total'),
+            orderTotal: document.getElementById('order-total')
+        };
 
-    function decreaseQuantity() {
-        const quantityInput = document.getElementById('quantity');
-        const currentValue = parseInt(quantityInput.value);
-        if (currentValue > 1) {
-            quantityInput.value = currentValue - 1;
+        // State management
+        let currentQuantity = 1;
+        let isProcessing = false;
+        let shippingRate = 0.015; // 1.5% shipping rate
+
+        // Utility functions
+        function formatPrice(amount) {
+            return `₹${amount.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
-    }
 
-    // Add to Cart functionality
-    document.getElementById('checkout-button').addEventListener('click', function() {
-        const quantity = document.getElementById('quantity').value;
-        const button = this;
-        
-        // Show loading state
-        button.innerHTML = '<svg class="animate-spin w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Processing...';
-        
-        // Simulate processing time
-        setTimeout(() => {
-            button.innerHTML = '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6M7 13l-1.5-6M20 13v6a2 2 0 01-2 2H6a2 2 0 01-2-2v-6"></path></svg>Buy Now';
+        function calculateShipping(itemsTotal) {
+            return itemsTotal * shippingRate;
+        }
+
+        function updatePriceDisplay() {
+            const itemsTotal = CONFIG.productPrice * currentQuantity;
+            const shipping = calculateShipping(itemsTotal);
+            const total = itemsTotal + shipping;
             
-            // Here you can add your actual checkout logic
-            console.log('Buying ' + quantity + ' of {{ product.name }}');
-        }, 2000);
-    });
-</script>
+            elements.totalPrice.textContent = formatPrice(itemsTotal);
+            elements.quantityTotal.textContent = `Items: ${formatPrice(itemsTotal)}`;
+            elements.itemsTotal.textContent = formatPrice(itemsTotal);
+            document.getElementById('shipping-cost').textContent = formatPrice(shipping);
+            elements.orderTotal.textContent = formatPrice(total);
+            elements.btnText.textContent = `Pay ${formatPrice(total)}`;
+        }
 
-{% endblock %}
+        function updateQuantityControls() {
+            elements.decreaseBtn.disabled = currentQuantity <= 1;
+            elements.increaseBtn.disabled = currentQuantity >= 99;
+        }
+
+        function setQuantity(quantity) {
+            const newQuantity = Math.max(1, Math.min(99, quantity));
+            if (newQuantity !== currentQuantity) {
+                currentQuantity = newQuantity;
+                elements.quantityInput.value = currentQuantity;
+                updatePriceDisplay();
+                updateQuantityControls();
+            }
+        }
+
+        // UI state management
+        function showLoading() {
+            if (isProcessing) return;
+            isProcessing = true;
+            elements.loadingDiv.style.display = 'block';
+            elements.checkoutBtn.disabled = true;
+            elements.btnText.style.display = 'none';
+            elements.btnLoading.style.display = 'inline';
+            hideMessages();
+        }
+
+        function hideLoading() {
+            isProcessing = false;
+            elements.loadingDiv.style.display = 'none';
+            elements.checkoutBtn.disabled = false;
+            elements.btnText.style.display = 'inline';
+            elements.btnLoading.style.display = 'none';
+        }
+
+        function showError(message) {
+            elements.errorDiv.textContent = message;
+            elements.errorDiv.style.display = 'block';
+            elements.successDiv.style.display = 'none';
+            elements.errorDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function showSuccess(message) {
+            elements.successDiv.textContent = message;
+            elements.successDiv.style.display = 'block';
+            elements.errorDiv.style.display = 'none';
+        }
+
+        function hideMessages() {
+            elements.errorDiv.style.display = 'none';
+            elements.successDiv.style.display = 'none';
+            elements.emailError.style.display = 'none';
+            elements.emailInput.classList.remove('error');
+        }
+
+        function showEmailError(message) {
+            elements.emailError.textContent = message;
+            elements.emailError.style.display = 'block';
+            elements.emailInput.classList.add('error');
+        }
+
+        // Validation
+        function validateEmail(email) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            return emailRegex.test(email.trim());
+        }
+
+        // CSRF token handling
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // API functions
+        async function createCheckoutSession(email, quantity) {
+            try {
+                const itemsTotal = CONFIG.productPrice * quantity;
+                const shipping = calculateShipping(itemsTotal);
+                const total = itemsTotal + shipping;
+                
+                const response = await fetch(CONFIG.apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ 
+                        email: email.trim(),
+                        quantity: quantity,
+                        items_total: itemsTotal,
+                        shipping_cost: shipping,
+                        total_amount: total
+                    })
+                });
+
+                const data = await response.json();
+                if (!response.ok) {
+                    throw new Error(data.error || 'Failed to create checkout session');
+                }
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        async function verifyPayment(paymentData) {
+            try {
+                const response = await fetch(CONFIG.verifyUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(paymentData)
+                });
+
+                const data = await response.json();
+                if (response.ok && data.status === 'success') {
+                    showSuccess('Payment successful! Redirecting...');
+                    setTimeout(() => {
+                        window.location.href = CONFIG.successUrlBase + data.order_id + '/';
+                    }, 2000);
+                } else {
+                    throw new Error(data.error || 'Payment verification failed');
+                }
+            } catch (error) {
+                hideLoading();
+                showError(`Payment verification failed: ${error.message}`);
+            }
+        }
+
+        // Razorpay integration
+        function openRazorpayCheckout(orderData, customerEmail) {
+            const options = {
+                key: orderData.razorpay_key_id,
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: 'DigiMandii',
+                description: `${CONFIG.productName} (Qty: ${currentQuantity})`,
+                order_id: orderData.order_id,
+                handler: function(response) {
+                    verifyPayment(response);
+                },
+                prefill: { 
+                    email: customerEmail 
+                },
+                theme: { 
+                    color: '#007bff' 
+                },
+                modal: {
+                    ondismiss: function() {
+                        hideLoading();
+                        showError('Payment was cancelled. Please try again.');
+                    }
+                }
+            };
+            
+            const razorpay = new Razorpay(options);
+            razorpay.open();
+        }
+
+        // Event listeners
+        elements.decreaseBtn.addEventListener('click', () => {
+            setQuantity(currentQuantity - 1);
+        });
+
+        elements.increaseBtn.addEventListener('click', () => {
+            setQuantity(currentQuantity + 1);
+        });
+
+        elements.quantityInput.addEventListener('input', (e) => {
+            const value = parseInt(e.target.value) || 1;
+            setQuantity(value);
+        });
+
+        elements.quantityInput.addEventListener('blur', (e) => {
+            if (!e.target.value || e.target.value < 1) {
+                setQuantity(1);
+            }
+        });
+
+        elements.emailInput.addEventListener('input', () => {
+            if (elements.emailInput.classList.contains('error')) {
+                elements.emailInput.classList.remove('error');
+                elements.emailError.style.display = 'none';
+            }
+        });
+
+        elements.checkoutForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            if (isProcessing) return;
+            
+            const email = elements.emailInput.value.trim();
+            
+            // Validation
+            if (!email) {
+                showEmailError('Email address is required');
+                elements.emailInput.focus();
+                return;
+            }
+            
+            if (!validateEmail(email)) {
+                showEmailError('Please enter a valid email address');
+                elements.emailInput.focus();
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const orderData = await createCheckoutSession(email, currentQuantity);
+                openRazorpayCheckout(orderData, email);
+            } catch (error) {
+                hideLoading();
+                showError(`Error: ${error.message}`);
+            }
+        });
+
+        // Initialize
+        updatePriceDisplay();
+        updateQuantityControls();
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target === elements.quantityInput) {
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    setQuantity(currentQuantity + 1);
+                } else if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    setQuantity(currentQuantity - 1);
+                }
+            }
+        });
+
+        // Prevent form submission on Enter in quantity input
+        elements.quantityInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                elements.emailInput.focus();
+            }
+        });
+    </script>
+</body>
+</html> 
