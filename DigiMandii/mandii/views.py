@@ -1,6 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib import messages
-from .models import Product, OrderDetail
+from .models import Product, OrderDetail, Wishlist
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
@@ -10,6 +10,10 @@ from django.http import JsonResponse
 import json
 import logging
 from .forms import ProductForm
+from django.contrib.auth.decorators import login_required
+from django.db import models
+from django.contrib.auth import logout
+
 
 # Set up logging
 logger = logging.getLogger(__name__)
@@ -26,57 +30,19 @@ def detail(request, id):
         'razorpay_key_id': razorpay_key_id
     })
 
-
-@staff_member_required
-def create_product(request):
-    """Admin: Create a new product"""
-    if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Product created successfully.')
-            return redirect('product_list')
-    else:
-        form = ProductForm()
-    return render(request, 'mandii/product_form.html', {'form': form})
-
-
-@staff_member_required
-def update_product(request, id):
-    """Admin: Update an existing product"""
-    product = get_object_or_404(Product, id=id)
-    if request.method == 'POST':
-        form = ProductForm(request.POST, request.FILES, instance=product)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Product updated successfully.')
-            return redirect('product_detail', id=product.id)
-    else:
-        form = ProductForm(instance=product)
-    return render(request, 'mandii/product_form.html', {'form': form})
-
-
-@staff_member_required
-def delete_product(request, id):
-    """Admin: Delete a product"""
-    product = get_object_or_404(Product, id=id)
-    if request.method == 'POST':
-        product.delete()
-        messages.success(request, 'Product deleted.')
-        return redirect('product_list')
-    return render(request, 'mandii/product_confirm_delete.html', {'product': product})
-
-
 @csrf_exempt
 @require_POST
 def create_checkout_session(request, id):
     try:
+        # Ensure user is logged in
+        if not request.user.is_authenticated:
+            return JsonResponse({'error': 'You must be logged in to place an order.'}, status=401)
+
         product = get_object_or_404(Product, id=id, is_active=True)
 
-        # Read customer email, quantity, and totals from frontend JSON body
+        # Parse data from frontend
         try:
             data = json.loads(request.body)
-            customer_email = data.get("email")
             quantity = int(data.get("quantity", 1))
             items_total = float(data.get("items_total", product.price))
             shipping_cost = float(data.get("shipping_cost", 0))
@@ -84,18 +50,21 @@ def create_checkout_session(request, id):
         except (json.JSONDecodeError, ValueError):
             return JsonResponse({'error': 'Invalid request data'}, status=400)
 
-        if not customer_email or '@' not in customer_email:
-            return JsonResponse({'error': 'Valid email is required'}, status=400)
+        # Get email from authenticated user
+        customer_email = request.user.email
 
-        # Initialize Razorpay client
+        if not customer_email or '@' not in customer_email:
+            return JsonResponse({'error': 'Your account email is invalid.'}, status=400)
+
+        # Razorpay client setup
         try:
             client = razorpay.Client(auth=(settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET))
         except Exception as e:
-            logger.error(f"Razorpay client initialization failed: {str(e)}")
+            logger.error(f"Razorpay client error: {str(e)}")
             return JsonResponse({'error': 'Payment service unavailable'}, status=500)
 
-        # Prepare order data
-        amount = int(total_amount * 100)  # Convert rupees to paise
+        # Razorpay order data
+        amount = int(total_amount * 100)  # in paise
         order_data = {
             "amount": amount,
             "currency": "INR",
@@ -109,9 +78,10 @@ def create_checkout_session(request, id):
             logger.error(f"Razorpay order creation failed: {str(e)}")
             return JsonResponse({'error': 'Failed to create payment order'}, status=500)
 
-        # Save order in DB
+        # Save to database
         try:
             order_detail = OrderDetail.objects.create(
+                user=request.user,
                 customer_email=customer_email,
                 product=product,
                 quantity=quantity,
@@ -133,12 +103,13 @@ def create_checkout_session(request, id):
             "currency": "INR",
             "product_name": product.name,
             "customer_email": customer_email,
-            "order_id_db": order_detail.id  # return DB order ID for redirect
+            "order_id_db": order_detail.id
         })
 
     except Exception as e:
-        logger.error(f"Unexpected error in create_checkout_session: {str(e)}")
+        logger.error(f"Unexpected error: {str(e)}")
         return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
+
 
 
 @csrf_exempt
@@ -315,3 +286,155 @@ def razorpay_webhook(request):
             return JsonResponse({'error': 'Webhook processing failed'}, status=500)
     
     return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+
+@csrf_exempt
+def add_to_wishlist(request, product_id):
+    if request.method == 'POST':
+        product = get_object_or_404(Product, id=product_id)
+        # Assuming a Wishlist model with user & product fields
+        if request.user.is_authenticated:
+            Wishlist.objects.get_or_create(user=request.user, product=product)
+            return JsonResponse({'success': True})
+        else:
+            return JsonResponse({'success': False, 'message': 'Login required'}, status=403)
+    return JsonResponse({'success': False, 'message': 'Invalid request'}, status=400)
+
+
+@login_required
+def my_orders_view(request):
+    # Debug: Check current user
+    print(f"Current user: {request.user}")
+    print(f"User email: {request.user.email}")
+    print(f"User ID: {request.user.id}")
+    
+    # Debug: Check all orders for this user
+    orders = OrderDetail.objects.filter(user=request.user).order_by('-created_on')
+    print(f"Orders found: {orders.count()}")
+    
+    # Debug: Check orders by email instead
+    orders_by_email = OrderDetail.objects.filter(customer_email=request.user.email)
+    print(f"Orders by email: {orders_by_email.count()}")
+    
+    return render(request, 'mandii/my_orders.html', {'orders': orders})
+
+# Add this to your views.py
+
+@login_required
+def create_product_view(request):
+    """Create a new product"""
+    if request.method == 'POST':
+        form = ProductForm(request.POST, request.FILES)
+        if form.is_valid():
+            product = form.save()
+            messages.success(request, f'Product "{product.name}" created successfully!')
+            return redirect('detail', id=product.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = ProductForm()
+    
+    return render(request, 'mandii/create_product.html', {'form': form})
+
+@login_required
+def edit_product_view(request, id):
+    """Edit an existing product"""
+    product = get_object_or_404(Product, id=id)
+    
+    if request.method == 'POST':
+        form = ProductForm(request.POST, request.FILES, instance=product)
+        if form.is_valid():
+            product = form.save()
+            messages.success(request, f'Product "{product.name}" updated successfully!')
+            return redirect('detail', id=product.id)
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = ProductForm(instance=product)
+    
+    return render(request, 'mandii/edit_product.html', {'form': form, 'product': product})
+
+@login_required
+def delete_product_view(request, id):
+    """Delete a product"""
+    product = get_object_or_404(Product, id=id)
+    
+    if request.method == 'POST':
+        product_name = product.name
+        product.delete()
+        messages.success(request, f'Product "{product_name}" deleted successfully!')
+        return redirect('index')
+    
+    return render(request, 'mandii/delete_product.html', {'product': product})
+
+from django.contrib.auth import login, logout, authenticate
+from django.contrib import messages
+
+def dashboard_view(request):
+    """Dashboard view - shows overview of user's activity"""
+    context = {
+        'title': 'Dashboard',
+    }
+    return render(request, 'mandii/dashboard.html', context)
+
+@login_required
+def sales_view(request):
+    """Sales view - shows user's sales data"""
+    context = {
+        'title': 'Sales',
+    }
+    return render(request, 'mandii/sales.html', context)
+
+@login_required
+def orders_view(request):
+    """Orders view - shows all orders (different from my_orders)"""
+    context = {
+        'title': 'Orders',
+        # Add orders data here
+    }
+    return render(request, 'mandii/orders.html', context)
+
+@login_required
+def profile_view(request):
+    """User profile view"""
+    context = {
+        'title': 'Profile',
+        'user': request.user,
+    }
+    return render(request, 'mandii/profile.html', context)
+
+@login_required
+def settings_view(request):
+    """User settings view"""
+    context = {
+        'title': 'Settings',
+    }
+    return render(request, 'mandii/settings.html', context)
+
+def login_view(request):
+    """Custom login view"""
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+
+        user = authenticate(request, username=username, password=password)
+        if user:
+            login(request, user)
+            next_url = request.GET.get('next', 'index')
+
+            return redirect(next_url)
+        else:
+            messages.error(request, 'Invalid username or password.')
+
+    return render(request, 'mandii/login.html') 
+
+from django.contrib.auth import logout
+from django.contrib import messages
+from django.shortcuts import redirect
+
+def logout_view(request):
+    """Logs out the user and redirects to login with a message."""
+    logout(request)
+    messages.success(request, "You have been logged out successfully.")
+    return redirect('login')

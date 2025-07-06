@@ -151,3 +151,6 @@ LOGGING = {
         },
     },
 }
+
+LOGIN_REDIRECT_URL = 'index'  # or 'dashboard' or any valid view name or path
+

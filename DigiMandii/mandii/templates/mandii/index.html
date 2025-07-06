@@ -6,19 +6,68 @@
     <div class="text-center mb-12">
         <h1 class="text-4xl font-bold text-gray-800 mb-4">Our Products</h1>
         <p class="text-gray-600 max-w-2xl mx-auto">Discover our amazing collection of products carefully selected for you</p>
+        
+        <!-- Product Count and Index Info -->
+        {% if products %}
+        <div class="mt-6 flex justify-center items-center space-x-4 text-sm text-gray-500">
+            <span>Total Products: {{ products|length }}</span>
+            <span>•</span>
+            <span>Showing {{ forloop.counter }} of {{ products|length }}</span>
+        </div>
+        {% endif %}
     </div>
+
+    <!-- Filter and Sort Controls -->
+    {% if products %}
+    <div class="mb-8 flex flex-wrap gap-4 justify-center items-center">
+        <!-- Sort Options -->
+        <div class="flex items-center space-x-2">
+            <label class="text-sm font-medium text-gray-700">Sort by:</label>
+            <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500" 
+                    onchange="sortProducts(this.value)">
+                <option value="index">Index Order</option>
+                <option value="name">Name (A-Z)</option>
+                <option value="price-low">Price (Low to High)</option>
+                <option value="price-high">Price (High to Low)</option>
+            </select>
+        </div>
+        
+        <!-- View Toggle -->
+        <div class="flex items-center space-x-2">
+            <label class="text-sm font-medium text-gray-700">View:</label>
+            <button onclick="toggleView('grid')" 
+                    class="px-3 py-2 bg-green-500 text-white rounded-lg text-sm hover:bg-green-600 transition-colors">
+                Grid
+            </button>
+            <button onclick="toggleView('list')" 
+                    class="px-3 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300 transition-colors">
+                List
+            </button>
+        </div>
+    </div>
+    {% endif %}
 
     <!-- Products Grid -->
     {% if products %}
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div id="products-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {% for product in products %}
-            <div class="product bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden">
+            <div class="product bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden" 
+                 data-index="{{ forloop.counter }}"
+                 data-name="{{ product.name|lower }}"
+                 data-price="{{ product.price }}">
+                
+                <!-- Product Index Badge -->
+                <div class="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold z-10">
+                    #{{ forloop.counter }}
+                </div>
+
                 <!-- Product Image -->
                 <div class="product-image relative overflow-hidden">
                     <img src="{{ product.file.url }}" 
                         alt="{{ product.name }}" 
                         class="w-full h-48 object-cover transition-transform duration-300 hover:scale-105">
-                    <!-- Optional: Add a badge for featured products -->
+                    
+                    <!-- Featured Badge -->
                     {% if product.is_featured %}
                     <div class="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
                         Featured
@@ -28,10 +77,16 @@
 
                 <!-- Product Info -->
                 <div class="p-6">
-                    <!-- Product Name -->
+                    <!-- Product Name with Index -->
                     <h3 class="font-bold text-xl text-gray-800 mb-2 line-clamp-2">
                         {{ product.name }}
                     </h3>
+
+                    <!-- Product Metadata -->
+                    <div class="flex items-center justify-between mb-3 text-xs text-gray-500">
+                        <span>Item #{{ forloop.counter }}</span>
+                        <span>ID: {{ product.id }}</span>
+                    </div>
 
                     <!-- Product Description -->
                     <p class="text-gray-600 text-sm mb-4 line-clamp-3">
@@ -61,24 +116,42 @@
                         </a>
                     </div>
 
-                    <!-- Optional: Quick Add to Cart -->
-                    {% comment %}
-                    <div class="mt-3">
-                        <button class="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2 px-4 rounded-lg transition-colors duration-200">
-                            Add to Cart
+                    <!-- Wishlist Button -->
+                    <div class="mt-3 flex justify-center">
+                        <button onclick="addToWishlist({{ product.id }})" 
+                                class="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors duration-200 flex items-center space-x-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                    d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
+                            </svg>
+                            <span>Add to Wishlist</span>
                         </button>
-                    </div>
-                    {% endcomment %}
+                    </div>                    
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        <!-- Pagination (if needed) -->
+        <!-- Index Navigation -->
+        <div class="mt-12 flex justify-center">
+            <div class="bg-white rounded-lg shadow-lg p-4">
+                <h3 class="text-sm font-medium text-gray-700 mb-3 text-center">Jump to Product</h3>
+                <div class="flex flex-wrap gap-2 justify-center max-w-md">
+                    {% for product in products %}
+                    <button onclick="scrollToProduct({{ forloop.counter }})" 
+                            class="w-8 h-8 bg-gray-100 hover:bg-green-500 hover:text-white rounded-full text-xs font-medium transition-colors duration-200">
+                        {{ forloop.counter }}
+                    </button>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Pagination with Index Info -->
         {% comment %}
         {% if products.has_other_pages %}
         <div class="mt-12 flex justify-center">
-            <nav class="flex space-x-2">
+            <nav class="flex space-x-2 items-center">
                 {% if products.has_previous %}
                 <a href="?page={{ products.previous_page_number }}" 
                     class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors">
@@ -87,7 +160,10 @@
                 {% endif %}
                 
                 <span class="px-4 py-2 bg-green-500 text-white rounded-lg">
-                    {{ products.number }} of {{ products.paginator.num_pages }}
+                    Page {{ products.number }} of {{ products.paginator.num_pages }}
+                </span>
+                <span class="text-sm text-gray-500">
+                    (Items {{ products.start_index }}-{{ products.end_index }} of {{ products.paginator.count }})
                 </span>
                 
                 {% if products.has_next %}
@@ -122,7 +198,7 @@
     {% endif %}
 </div>
 
-<!-- Custom CSS for line clamping (add to your base template or CSS file) -->
+<!-- Custom CSS and JavaScript -->
 <style>
     .line-clamp-2 {
         display: -webkit-box;
@@ -137,6 +213,175 @@
         -webkit-box-orient: vertical;
         overflow: hidden;
     }
+
+    /* List View Styles */
+    .list-view .product {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .list-view .product-image {
+        width: 120px;
+        height: 120px;
+        flex-shrink: 0;
+        margin-right: 1rem;
+    }
+
+    .list-view .product-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+
+    .list-view .product .p-6 {
+        flex: 1;
+        padding: 1rem;
+    }
+
+    /* Smooth scroll behavior */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Highlight active product */
+    .product.highlight {
+        box-shadow: 0 0 20px rgba(34, 197, 94, 0.3);
+        border: 2px solid #22c55e;
+    }
 </style>
+
+<script>
+    // Sort products functionality
+    function sortProducts(sortBy) {
+        const container = document.getElementById('products-container');
+        const products = Array.from(container.children);
+        
+        products.sort((a, b) => {
+            switch(sortBy) {
+                case 'name':
+                    return a.dataset.name.localeCompare(b.dataset.name);
+                case 'price-low':
+                    return parseFloat(a.dataset.price) - parseFloat(b.dataset.price);
+                case 'price-high':
+                    return parseFloat(b.dataset.price) - parseFloat(a.dataset.price);
+                case 'index':
+                default:
+                    return parseInt(a.dataset.index) - parseInt(b.dataset.index);
+            }
+        });
+        
+        // Re-append sorted products
+        products.forEach(product => container.appendChild(product));
+    }
+
+    // Toggle view (grid/list)
+    function toggleView(view) {
+        const container = document.getElementById('products-container');
+        const buttons = document.querySelectorAll('[onclick^="toggleView"]');
+        
+        if (view === 'list') {
+            container.classList.remove('grid', 'grid-cols-1', 'sm:grid-cols-2', 'lg:grid-cols-3', 'xl:grid-cols-4');
+            container.classList.add('list-view');
+            buttons[1].classList.add('bg-green-500', 'text-white');
+            buttons[1].classList.remove('bg-gray-200', 'text-gray-700');
+            buttons[0].classList.add('bg-gray-200', 'text-gray-700');
+            buttons[0].classList.remove('bg-green-500', 'text-white');
+        } else {
+            container.classList.add('grid', 'grid-cols-1', 'sm:grid-cols-2', 'lg:grid-cols-3', 'xl:grid-cols-4');
+            container.classList.remove('list-view');
+            buttons[0].classList.add('bg-green-500', 'text-white');
+            buttons[0].classList.remove('bg-gray-200', 'text-gray-700');
+            buttons[1].classList.add('bg-gray-200', 'text-gray-700');
+            buttons[1].classList.remove('bg-green-500', 'text-white');
+        }
+    }
+
+    // Scroll to specific product
+    function scrollToProduct(index) {
+        const product = document.querySelector(`[data-index="${index}"]`);
+        if (product) {
+            // Remove previous highlights
+            document.querySelectorAll('.product.highlight').forEach(p => p.classList.remove('highlight'));
+            
+            // Scroll to product
+            product.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Highlight the product
+            product.classList.add('highlight');
+            
+            // Remove highlight after 3 seconds
+            setTimeout(() => {
+                product.classList.remove('highlight');
+            }, 3000);
+        }
+    }
+
+    // Add to wishlist functionality
+    function addToWishlist(productId) {
+        // Implement wishlist functionality
+        console.log('Add to wishlist:', productId);
+        // You can implement AJAX call to add to wishlist
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', function() {
+        // Set initial sort
+        sortProducts('index');
+        
+        // Add keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                // Navigate to next product
+                const current = document.querySelector('.product.highlight');
+                if (current) {
+                    const next = current.nextElementSibling;
+                    if (next) {
+                        const nextIndex = parseInt(next.dataset.index);
+                        scrollToProduct(nextIndex);
+                    }
+                }
+            } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                // Navigate to previous product
+                const current = document.querySelector('.product.highlight');
+                if (current) {
+                    const prev = current.previousElementSibling;
+                    if (prev) {
+                        const prevIndex = parseInt(prev.dataset.index);
+                        scrollToProduct(prevIndex);
+                    }
+                }
+            }
+        });
+    });
+
+function addToWishlist(productId) {
+    fetch(`/wishlist/add/${productId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCSRFToken(),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ product_id: productId })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            alert("Product added to wishlist!");
+        } else {
+            alert(data.message || "Something went wrong.");
+        }
+    });
+}
+
+function getCSRFToken() {
+    let cookie = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+    return cookie ? cookie.split('=')[1] : '';
+}
+
+
+</script>
+
 
 {% endblock %}
