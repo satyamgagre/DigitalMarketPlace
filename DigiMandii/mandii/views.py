@@ -382,44 +382,190 @@ def delete_product_view(request, id):
 @login_required
 def dashboard_view(request):
     """Dashboard view - shows overview of user's activity"""
+    from django.db.models import Sum
+    
     context = {
         'title': 'Dashboard',
+        'total_products': Product.objects.count(),
+        'total_revenue': OrderDetail.objects.aggregate(Sum('total_amount'))['total_amount__sum'] or 0,
+        'total_orders': OrderDetail.objects.count(),
+        'wishlist_count': Wishlist.objects.filter(user=request.user).count(),
+        'recent_orders': OrderDetail.objects.order_by('-created_on')[:5],
+        'top_products': Product.objects.filter(is_active=True)[:5],
     }
     return render(request, 'mandii/dashboard.html', context)
+
 
 @login_required
 def sales_view(request):
     """Sales view - shows user's sales data"""
+    from django.db.models import Sum, Count
+    from django.utils import timezone
+    from datetime import datetime, timedelta
+    
+    # Get date range filter
+    days = request.GET.get('days', 30)
+    try:
+        days = int(days)
+    except ValueError:
+        days = 30
+    
+    start_date = timezone.now() - timedelta(days=days)
+    
+    # Sales data
+    sales_data = OrderDetail.objects.filter(
+        has_paid=True,
+        created_on__gte=start_date
+    ).aggregate(
+        total_sales=Sum('total_amount'),
+        total_orders=Count('id')
+    )
+    
+    # Recent sales
+    recent_sales = OrderDetail.objects.filter(
+        has_paid=True
+    ).select_related('product').order_by('-created_on')[:10]
+    
+    # Top selling products
+    top_products = Product.objects.filter(
+        orderdetail__has_paid=True,
+        orderdetail__created_on__gte=start_date
+    ).annotate(
+        total_sold=Count('orderdetail'),
+        revenue=Sum('orderdetail__total_amount')
+    ).order_by('-total_sold')[:5]
+    
     context = {
         'title': 'Sales',
+        'days': days,
+        'total_sales': sales_data['total_sales'] or 0,
+        'total_orders': sales_data['total_orders'] or 0,
+        'recent_sales': recent_sales,
+        'top_products': top_products,
     }
     return render(request, 'mandii/sales.html', context)
 
 @login_required
 def orders_view(request):
-    """Orders view - shows all orders (different from my_orders)"""
+    """Orders view - shows all orders with filtering and pagination"""
+    from django.core.paginator import Paginator
+    from django.db.models import Q
+    
+    # Get filter parameters
+    status_filter = request.GET.get('status', 'all')
+    search_query = request.GET.get('search', '')
+    
+    # Base queryset
+    orders = OrderDetail.objects.select_related('product', 'user').order_by('-created_on')
+    
+    # Apply filters
+    if status_filter == 'paid':
+        orders = orders.filter(has_paid=True)
+    elif status_filter == 'pending':
+        orders = orders.filter(has_paid=False, payment_status='pending')
+    elif status_filter == 'failed':
+        orders = orders.filter(payment_status='failed')
+    elif status_filter == 'completed':
+        orders = orders.filter(payment_status='completed')
+    
+    # Search functionality
+    if search_query:
+        orders = orders.filter(
+            Q(customer_email__icontains=search_query) |
+            Q(product__name__icontains=search_query) |
+            Q(razorpay_order_id__icontains=search_query)
+        )
+    
+    # Pagination
+    paginator = Paginator(orders, 20)  # 20 orders per page
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    
+    # Order statistics
+    total_orders = OrderDetail.objects.count()
+    paid_orders = OrderDetail.objects.filter(has_paid=True).count()
+    pending_orders = OrderDetail.objects.filter(has_paid=False, payment_status='pending').count()
+    failed_orders = OrderDetail.objects.filter(payment_status='failed').count()
+    
     context = {
         'title': 'Orders',
-        # Add orders data here
+        'orders': page_obj,
+        'status_filter': status_filter,
+        'search_query': search_query,
+        'total_orders': total_orders,
+        'paid_orders': paid_orders,
+        'pending_orders': pending_orders,
+        'failed_orders': failed_orders,
     }
     return render(request, 'mandii/orders.html', context)
 
+
 @login_required
 def profile_view(request):
-    """User profile view"""
+    """User profile view with update functionality"""
+    from django.db.models import Sum, Count
+    from django.contrib.auth.forms import PasswordChangeForm
+    from django.contrib.auth import update_session_auth_hash
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'update_profile':
+            # Update basic profile information
+            first_name = request.POST.get('first_name', '')
+            last_name = request.POST.get('last_name', '')
+            email = request.POST.get('email', '')
+            
+            # Validate email
+            if email and '@' not in email:
+                messages.error(request, 'Please enter a valid email address.')
+            elif email and User.objects.filter(email=email).exclude(id=request.user.id).exists():
+                messages.error(request, 'This email is already registered.')
+            else:
+                # Update user information
+                request.user.first_name = first_name
+                request.user.last_name = last_name
+                if email:
+                    request.user.email = email
+                request.user.save()
+                messages.success(request, 'Profile updated successfully!')
+                
+        elif action == 'change_password':
+            # Handle password change
+            form = PasswordChangeForm(request.user, request.POST)
+            if form.is_valid():
+                user = form.save()
+                update_session_auth_hash(request, user)  # Keep user logged in
+                messages.success(request, 'Password changed successfully!')
+            else:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'{field}: {error}')
+    
+    # Get user statistics
+    user_stats = {
+        'total_orders': OrderDetail.objects.filter(user=request.user).count(),
+        'total_spent': OrderDetail.objects.filter(
+            user=request.user, has_paid=True
+        ).aggregate(Sum('total_amount'))['total_amount__sum'] or 0,
+        'wishlist_items': Wishlist.objects.filter(user=request.user).count(),
+        'recent_orders': OrderDetail.objects.filter(
+            user=request.user
+        ).select_related('product').order_by('-created_on')[:5]
+    }
+    
+    # Password change form
+    password_form = PasswordChangeForm(request.user)
+    
     context = {
         'title': 'Profile',
         'user': request.user,
+        'user_stats': user_stats,
+        'password_form': password_form,
     }
     return render(request, 'mandii/profile.html', context)
 
-@login_required
-def settings_view(request):
-    """User settings view"""
-    context = {
-        'title': 'Settings',
-    }
-    return render(request, 'mandii/settings.html', context)
+
 
 def login_view(request):
     """Custom login view"""
@@ -443,29 +589,9 @@ def logout_view(request):
     messages.success(request, "You have been logged out successfully.")
     return redirect('login')
 
-# NEW: Registration view
-def register_view(request):
-    """User registration view"""
-    if request.method == 'POST':
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            username = form.cleaned_data.get('username')
-            messages.success(request, f'Account created for {username}! You can now log in.')
-            return redirect('login')
-        else:
-            # Add form errors to messages
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f'{field}: {error}')
-    else:
-        form = UserCreationForm()
-    
-    return render(request, 'mandii/register.html', {'form': form})
 
-# NEW: Custom registration view with email
-def register_with_email_view(request):
-    """User registration view with email validation"""
+def register_view(request):
+    """Simple user registration view"""
     if request.method == 'POST':
         username = request.POST.get('username')
         email = request.POST.get('email')
@@ -485,12 +611,11 @@ def register_with_email_view(request):
             messages.error(request, 'Password must be at least 8 characters long.')
             return render(request, 'mandii/register.html')
         
-        # Check if username already exists
+        # Check if user exists
         if User.objects.filter(username=username).exists():
             messages.error(request, 'Username already exists.')
             return render(request, 'mandii/register.html')
         
-        # Check if email already exists
         if User.objects.filter(email=email).exists():
             messages.error(request, 'Email already registered.')
             return render(request, 'mandii/register.html')
@@ -508,6 +633,44 @@ def register_with_email_view(request):
             messages.error(request, f'Error creating account: {str(e)}')
     
     return render(request, 'mandii/register.html')
+
+@login_required
+def settings_view(request):
+    """Simple user settings view"""
+    if request.method == 'POST':
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        email = request.POST.get('email')
+        
+        # Basic validation
+        if not email:
+            messages.error(request, 'Email is required.')
+            return render(request, 'mandii/settings.html')
+        
+        # Check if email is already taken by another user
+        if User.objects.filter(email=email).exclude(id=request.user.id).exists():
+            messages.error(request, 'Email already in use by another account.')
+            return render(request, 'mandii/settings.html')
+        
+        try:
+            # Update user info
+            request.user.first_name = first_name or ''
+            request.user.last_name = last_name or ''
+            request.user.email = email
+            request.user.save()
+            
+            messages.success(request, 'Settings updated successfully!')
+            return redirect('settings')
+        except Exception as e:
+            messages.error(request, f'Error updating settings: {str(e)}')
+    
+    context = {
+        'title': 'Settings',
+        'user': request.user,
+    }
+    return render(request, 'mandii/settings.html', context)
+
+
 
 # NEW: Password reset request view
 def password_reset_request_view(request):
