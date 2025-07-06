@@ -152,5 +152,5 @@ LOGGING = {
     },
 }
 
-LOGIN_REDIRECT_URL = 'index'  # or 'dashboard' or any valid view name or path
-
+LOGIN_REDIRECT_URL = 'index'
+LOGOUT_REDIRECT_URL = '/login/'

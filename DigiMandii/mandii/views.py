@@ -12,7 +12,16 @@ import logging
 from .forms import ProductForm
 from django.contrib.auth.decorators import login_required
 from django.db import models
-from django.contrib.auth import logout
+from django.contrib.auth import logout, login, authenticate
+from django.contrib.auth.models import User
+from django.contrib.auth.forms import UserCreationForm
+from django.core.mail import send_mail
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.template.loader import render_to_string
+from django.contrib.sites.shortcuts import get_current_site
+from django.utils.encoding import force_str
 
 
 # Set up logging
@@ -110,8 +119,7 @@ def create_checkout_session(request, id):
         logger.error(f"Unexpected error: {str(e)}")
         return JsonResponse({'error': 'An unexpected error occurred'}, status=500)
 
-
-
+@login_required
 @csrf_exempt
 @require_POST
 def payment_verification(request):
@@ -164,6 +172,7 @@ def payment_verification(request):
         logger.error(f"Payment verification error: {str(e)}")
         return JsonResponse({'error': 'Payment verification failed'}, status=500)
 
+@login_required
 def payment_success_view(request, order_id):
     """Display payment success page"""
     try:
@@ -185,6 +194,7 @@ def payment_success_view(request, order_id):
         messages.error(request, 'Order not found or payment not completed.')
         return redirect('index')
 
+@login_required
 def payment_failed_view(request):
     """Display payment failure page"""
     # Get failure details from session or query parameters
@@ -214,6 +224,7 @@ def payment_failed_view(request):
     
     return render(request, 'mandii/payment_failed.html', context)
 
+@login_required
 @csrf_exempt
 def razorpay_webhook(request):
     """Handle Razorpay webhooks for payment events"""
@@ -288,7 +299,7 @@ def razorpay_webhook(request):
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
 
-
+@login_required
 @csrf_exempt
 def add_to_wishlist(request, product_id):
     if request.method == 'POST':
@@ -368,9 +379,7 @@ def delete_product_view(request, id):
     
     return render(request, 'mandii/delete_product.html', {'product': product})
 
-from django.contrib.auth import login, logout, authenticate
-from django.contrib import messages
-
+@login_required
 def dashboard_view(request):
     """Dashboard view - shows overview of user's activity"""
     context = {
@@ -422,19 +431,186 @@ def login_view(request):
         if user:
             login(request, user)
             next_url = request.GET.get('next', 'index')
-
             return redirect(next_url)
         else:
             messages.error(request, 'Invalid username or password.')
 
     return render(request, 'mandii/login.html') 
 
-from django.contrib.auth import logout
-from django.contrib import messages
-from django.shortcuts import redirect
-
 def logout_view(request):
     """Logs out the user and redirects to login with a message."""
     logout(request)
     messages.success(request, "You have been logged out successfully.")
     return redirect('login')
+
+# NEW: Registration view
+def register_view(request):
+    """User registration view"""
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            username = form.cleaned_data.get('username')
+            messages.success(request, f'Account created for {username}! You can now log in.')
+            return redirect('login')
+        else:
+            # Add form errors to messages
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f'{field}: {error}')
+    else:
+        form = UserCreationForm()
+    
+    return render(request, 'mandii/register.html', {'form': form})
+
+# NEW: Custom registration view with email
+def register_with_email_view(request):
+    """User registration view with email validation"""
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password1 = request.POST.get('password1')
+        password2 = request.POST.get('password2')
+        
+        # Basic validation
+        if not all([username, email, password1, password2]):
+            messages.error(request, 'All fields are required.')
+            return render(request, 'mandii/register.html')
+        
+        if password1 != password2:
+            messages.error(request, 'Passwords do not match.')
+            return render(request, 'mandii/register.html')
+        
+        if len(password1) < 8:
+            messages.error(request, 'Password must be at least 8 characters long.')
+            return render(request, 'mandii/register.html')
+        
+        # Check if username already exists
+        if User.objects.filter(username=username).exists():
+            messages.error(request, 'Username already exists.')
+            return render(request, 'mandii/register.html')
+        
+        # Check if email already exists
+        if User.objects.filter(email=email).exists():
+            messages.error(request, 'Email already registered.')
+            return render(request, 'mandii/register.html')
+        
+        try:
+            # Create user
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password1
+            )
+            messages.success(request, f'Account created for {username}! You can now log in.')
+            return redirect('login')
+        except Exception as e:
+            messages.error(request, f'Error creating account: {str(e)}')
+    
+    return render(request, 'mandii/register.html')
+
+# NEW: Password reset request view
+def password_reset_request_view(request):
+    """Password reset request view"""
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        
+        if not email:
+            messages.error(request, 'Email is required.')
+            return render(request, 'mandii/password_reset_request.html')
+        
+        try:
+            user = User.objects.get(email=email)
+            
+            # Generate token
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # Create reset link
+            current_site = get_current_site(request)
+            reset_link = f"http://{current_site.domain}/password-reset-confirm/{uid}/{token}/"
+            
+            # Send email
+            subject = 'Password Reset Request'
+            message = f"""
+            Hello {user.username},
+            
+            You requested a password reset. Click the link below to reset your password:
+            {reset_link}
+            
+            If you didn't request this, please ignore this email.
+            
+            Best regards,
+            Your Team
+            """
+            
+            try:
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [email],
+                    fail_silently=False,
+                )
+                messages.success(request, 'Password reset email sent! Check your email.')
+                return redirect('login')
+            except Exception as e:
+                messages.error(request, 'Error sending email. Please try again later.')
+                logger.error(f"Email sending error: {str(e)}")
+                
+        except User.DoesNotExist:
+            # Don't reveal if email exists or not for security
+            messages.success(request, 'If an account with this email exists, you will receive a password reset email.')
+            return redirect('login')
+    
+    return render(request, 'mandii/password_reset_request.html')
+
+# NEW: Password reset confirm view
+def password_reset_confirm_view(request, uidb64, token):
+    """Password reset confirmation view"""
+    try:
+        uid = force_str(urlsafe_base64_decode(uidb64))
+        user = User.objects.get(pk=uid)
+    except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        user = None
+    
+    if user is not None and default_token_generator.check_token(user, token):
+        if request.method == 'POST':
+            password1 = request.POST.get('password1')
+            password2 = request.POST.get('password2')
+            
+            if not password1 or not password2:
+                messages.error(request, 'Both password fields are required.')
+                return render(request, 'mandii/password_reset_confirm.html', {
+                    'validlink': True,
+                    'user': user
+                })
+            
+            if password1 != password2:
+                messages.error(request, 'Passwords do not match.')
+                return render(request, 'mandii/password_reset_confirm.html', {
+                    'validlink': True,
+                    'user': user
+                })
+            
+            if len(password1) < 8:
+                messages.error(request, 'Password must be at least 8 characters long.')
+                return render(request, 'mandii/password_reset_confirm.html', {
+                    'validlink': True,
+                    'user': user
+                })
+            
+            # Set new password
+            user.set_password(password1)
+            user.save()
+            
+            messages.success(request, 'Password reset successful! You can now log in with your new password.')
+            return redirect('login')
+        
+        return render(request, 'mandii/password_reset_confirm.html', {
+            'validlink': True,
+            'user': user
+        })
+    else:
+        messages.error(request, 'Invalid or expired password reset link.')
+        return redirect('password_reset_request')

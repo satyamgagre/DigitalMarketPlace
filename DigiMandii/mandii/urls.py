@@ -35,10 +35,20 @@ urlpatterns = [
     # Orders
     path('my-orders/', views.my_orders_view, name='my_orders'),
     
-    # Authentication (if using Django's built-in auth)
-    path('accounts/login/', auth_views.LoginView.as_view(template_name='mandii/login.html'), name='login'),
-    path('accounts/logout/', views.logout_view, name='logout'),
-
+    # Authentication
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('register/', views.register_with_email_view, name='register'),
+    path('signup/', views.register_with_email_view, name='signup'),  # Alternative URL
+    
+    # Password Reset
+    path('password-reset/', views.password_reset_request_view, name='password_reset_request'),
+    path('password-reset-confirm/<uidb64>/<token>/', views.password_reset_confirm_view, name='password_reset_confirm'),
+    path('forgot-password/', views.password_reset_request_view, name='forgot_password'),  # Alternative URL
+    
+    # Django's built-in auth views (alternative approach)
+    path('accounts/login/', auth_views.LoginView.as_view(template_name='mandii/login.html'), name='accounts_login'),
+    path('accounts/logout/', views.logout_view, name='accounts_logout'),
 ]
 
 urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
