@@ -3,8 +3,8 @@ from django.core.validators import MinValueValidator
 from decimal import Decimal
 from django.contrib.auth.models import User
 
-
 class Product(models.Model):
+    seller = models.ForeignKey(User, on_delete=models.CASCADE, related_name='products')
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=200)
     price = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
@@ -18,8 +18,6 @@ class Product(models.Model):
 
     class Meta:
         ordering = ['-created_on']
-
-from django.contrib.auth.models import User
 
 class OrderDetail(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders', null=True, blank=True)
