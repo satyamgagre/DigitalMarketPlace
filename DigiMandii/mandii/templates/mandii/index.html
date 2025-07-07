@@ -52,9 +52,9 @@
         <div id="products-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {% for product in products %}
             <div class="product bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden" 
-                 data-index="{{ forloop.counter }}"
-                 data-name="{{ product.name|lower }}"
-                 data-price="{{ product.price }}">
+                    data-index="{{ forloop.counter }}"
+                    data-name="{{ product.name|lower }}"
+                    data-price="{{ product.price }}">
                 
                 <!-- Product Index Badge -->
                 <div class="absolute top-2 left-2 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold z-10">
